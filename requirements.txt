@@ -92,3 +92,5 @@ requests>=2.28.0
 # GUI - CustomTkinter (Modern Tkinter UI)
 # -----------------------------------------------------------------------------
 customtkinter>=5.2.0
+opencv-python>=4.8.0
+Pillow>=9.0.0
