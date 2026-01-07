@@ -16,6 +16,7 @@ sys.path.insert(0, str(PROJECT_ROOT))
 from gui.utils.config_manager import ConfigManager
 from gui.utils.theme import COLORS, FONTS
 from gui.components.translate_panel import TranslatePanel
+from gui.components.video_manager_panel import VideoManagerPanel
 
 
 class VideoTranslateApp(ctk.CTk):
@@ -41,6 +42,9 @@ class VideoTranslateApp(ctk.CTk):
         if icon_path.exists():
             self.iconbitmap(str(icon_path))
 
+        # 目前顯示的面板
+        self.current_panel = None
+
         # 建立 UI
         self._setup_ui()
 
@@ -52,15 +56,27 @@ class VideoTranslateApp(ctk.CTk):
         # 配置 grid
         self.grid_columnconfigure(0, weight=1)
         self.grid_rowconfigure(0, weight=0)  # 標題列
-        self.grid_rowconfigure(1, weight=1)  # 主內容
-        self.grid_rowconfigure(2, weight=0)  # 狀態列
+        self.grid_rowconfigure(1, weight=0)  # 導航列
+        self.grid_rowconfigure(2, weight=1)  # 主內容
+        self.grid_rowconfigure(3, weight=0)  # 狀態列
 
         # === 標題列 ===
         self._create_header()
 
-        # === 主內容區 (翻譯處理面板) ===
-        self.translate_panel = TranslatePanel(self, self.config_manager)
-        self.translate_panel.grid(row=1, column=0, sticky="nsew", padx=15, pady=(5, 10))
+        # === 導航列 ===
+        self._create_nav_bar()
+
+        # === 主內容區 (容器) ===
+        self.content_frame = ctk.CTkFrame(self, fg_color="transparent")
+        self.content_frame.grid(row=2, column=0, sticky="nsew", padx=15, pady=(5, 10))
+        self.content_frame.grid_columnconfigure(0, weight=1)
+        self.content_frame.grid_rowconfigure(0, weight=1)
+
+        # 建立各個面板 (延遲載入)
+        self.panels = {}
+
+        # 預設顯示翻譯處理面板
+        self._show_panel("translate")
 
         # === 狀態列 ===
         self._create_status_bar()
@@ -82,16 +98,73 @@ class VideoTranslateApp(ctk.CTk):
         # 版本資訊
         version_label = ctk.CTkLabel(
             header_frame,
-            text="v1.0.0",
+            text="v1.1.0",
             font=ctk.CTkFont(size=12),
             text_color=COLORS["text_secondary"]
         )
         version_label.grid(row=0, column=1, sticky="w", padx=10)
 
+    def _create_nav_bar(self):
+        """建立導航列"""
+        nav_frame = ctk.CTkFrame(self, height=45, fg_color=COLORS["surface"])
+        nav_frame.grid(row=1, column=0, sticky="ew", padx=15, pady=(0, 5))
+
+        # 導航按鈕
+        self.nav_buttons = {}
+
+        # 影片管理
+        self.nav_buttons["video_manager"] = ctk.CTkButton(
+            nav_frame,
+            text="📁 影片管理",
+            width=120,
+            height=35,
+            fg_color="transparent",
+            text_color=COLORS["text"],
+            hover_color=COLORS["background"],
+            command=lambda: self._show_panel("video_manager")
+        )
+        self.nav_buttons["video_manager"].pack(side="left", padx=5, pady=5)
+
+        # 翻譯處理
+        self.nav_buttons["translate"] = ctk.CTkButton(
+            nav_frame,
+            text="🔄 翻譯處理",
+            width=120,
+            height=35,
+            fg_color=COLORS["primary"],
+            text_color="#000000",
+            hover_color="#00a8cc",
+            command=lambda: self._show_panel("translate")
+        )
+        self.nav_buttons["translate"].pack(side="left", padx=5, pady=5)
+
+    def _show_panel(self, panel_name: str):
+        """顯示指定面板"""
+        # 更新導航按鈕樣式
+        for name, btn in self.nav_buttons.items():
+            if name == panel_name:
+                btn.configure(fg_color=COLORS["primary"], text_color="#000000")
+            else:
+                btn.configure(fg_color="transparent", text_color=COLORS["text"])
+
+        # 隱藏當前面板
+        if self.current_panel:
+            self.current_panel.grid_forget()
+
+        # 建立或顯示面板
+        if panel_name not in self.panels:
+            if panel_name == "translate":
+                self.panels["translate"] = TranslatePanel(self.content_frame, self.config_manager)
+            elif panel_name == "video_manager":
+                self.panels["video_manager"] = VideoManagerPanel(self.content_frame, self.config_manager)
+
+        self.panels[panel_name].grid(row=0, column=0, sticky="nsew")
+        self.current_panel = self.panels[panel_name]
+
     def _create_status_bar(self):
         """建立狀態列"""
         self.status_frame = ctk.CTkFrame(self, height=30, fg_color=COLORS["surface"])
-        self.status_frame.grid(row=2, column=0, sticky="ew", padx=15, pady=(0, 10))
+        self.status_frame.grid(row=3, column=0, sticky="ew", padx=15, pady=(0, 10))
 
         self.status_label = ctk.CTkLabel(
             self.status_frame,
@@ -108,8 +181,10 @@ class VideoTranslateApp(ctk.CTk):
     def _on_closing(self):
         """視窗關閉事件"""
         # 停止任何進行中的處理
-        if hasattr(self, 'translate_panel') and self.translate_panel.is_processing:
-            self.translate_panel.stop_processing()
+        if "translate" in self.panels:
+            panel = self.panels["translate"]
+            if hasattr(panel, 'is_processing') and panel.is_processing:
+                panel.stop_processing()
 
         self.destroy()
 
