@@ -348,8 +348,8 @@ class VideoManagerPanel(ctk.CTkFrame):
     def _setup_ui(self):
         """建立 UI"""
         # 配置 grid - 左右兩欄
-        self.grid_columnconfigure(0, weight=2)  # 左側：影片列表
-        self.grid_columnconfigure(1, weight=3)  # 右側：預覽與編輯
+        self.grid_columnconfigure(0, weight=1)  # 左側：影片列表
+        self.grid_columnconfigure(1, weight=2)  # 右側：預覽與編輯 (更寬)
         self.grid_rowconfigure(0, weight=1)
 
         # === 右側面板：預覽與重新命名 (先建立，因為左側會用到) ===
@@ -432,8 +432,8 @@ class VideoManagerPanel(ctk.CTkFrame):
         right_frame = ctk.CTkFrame(self)
         right_frame.grid(row=0, column=1, sticky="nsew", padx=0, pady=0)
         right_frame.grid_columnconfigure(0, weight=1)
-        right_frame.grid_rowconfigure(1, weight=0)
-        right_frame.grid_rowconfigure(2, weight=1)
+        right_frame.grid_rowconfigure(0, weight=1)  # 預覽區可伸展
+        right_frame.grid_rowconfigure(1, weight=0)  # 重新命名區固定高度
 
         # --- 預覽區 ---
         preview_frame = ctk.CTkFrame(right_frame)
@@ -447,12 +447,12 @@ class VideoManagerPanel(ctk.CTkFrame):
             font=ctk.CTkFont(size=14, weight="bold")
         ).grid(row=0, column=0, sticky="w", padx=10, pady=(10, 5))
 
-        # 影片 Canvas
+        # 影片 Canvas (縮小高度，讓下方有更多空間)
         self.video_canvas = tk.Canvas(
             preview_frame,
             bg="#1a1a2e",
             highlightthickness=0,
-            height=280
+            height=200
         )
         self.video_canvas.grid(row=1, column=0, sticky="nsew", padx=10, pady=5)
 
@@ -513,7 +513,7 @@ class VideoManagerPanel(ctk.CTkFrame):
 
         # --- 重新命名區 ---
         rename_frame = ctk.CTkFrame(right_frame)
-        rename_frame.grid(row=2, column=0, sticky="new", padx=15, pady=(0, 15))
+        rename_frame.grid(row=1, column=0, sticky="ew", padx=15, pady=(0, 15))
         rename_frame.grid_columnconfigure(0, weight=1)
 
         ctk.CTkLabel(
@@ -550,8 +550,9 @@ class VideoManagerPanel(ctk.CTkFrame):
 
         self.new_name_entry = ctk.CTkEntry(
             rename_frame,
-            placeholder_text="輸入新的檔案名稱 (不含副檔名)",
-            height=38
+            height=35,
+            font=ctk.CTkFont(size=12),
+            placeholder_text="輸入新檔名..."
         )
         self.new_name_entry.grid(row=4, column=0, sticky="ew", padx=10, pady=(2, 10))
 
@@ -763,6 +764,7 @@ class VideoManagerPanel(ctk.CTkFrame):
             self.player.stop()
 
         new_name = self.new_name_entry.get().strip()
+
         if not new_name:
             messagebox.showwarning("警告", "請輸入新的檔案名稱")
             return
